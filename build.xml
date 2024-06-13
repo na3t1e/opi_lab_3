@@ -1,30 +1,39 @@
-<project name="web-lab-3" default="compile" basedir="./web-lab-3">
+<project name="opi_lab_3" default="compile" basedir=".">
+    <property name="src.dir" value="src/main/java"/>
+    <property name="build.dir" value="build"/>
+    <property name="classes.dir" value="build/classes"/>
+    <property name="lib.dir" value="lib"/>
+    <property name="test.dir" value="src/test/java"/>
+    <property name="webapp.dir" value="src/main/webapp"/>
+    <property name="war.name" value="opi_lab_3.war"/>
+    <property name="checksums.md5.file" value="build/checksums.md5"/>
+    <property name="checksums.sha1.file" value="build/checksums.sha1"/>
+    <property name="env.script" value="script.bat"/>
 
-    <!-- Include variables and constants -->
-    <property file="../build.properties" />
-
-    <!-- Define the classpath for the project -->
     <path id="project.classpath">
-        <fileset dir="${lib.dir}">
-            <include name="**/*.jar" />
-        </fileset>
+        <fileset dir="${lib.dir}" includes="*.jar"/>
+        <fileset dir="${src.dir}" includes="*.java"/>
     </path>
-
     <!-- Clean the build directory -->
     <target name="clean">
         <delete dir="${build.dir}" />
     </target>
-    
+
     <!-- Create the build directory structure -->
     <target name="init">
         <mkdir dir="${build.dir}" />
         <mkdir dir="${classes.dir}" />
+        <mkdir dir="${webapp.dir}" />
     </target>
 
-    <!-- [default] Compile project -->
+    <!-- Compile project -->
     <target name="compile" depends="init">
-        <javac srcdir="${src.dir}" destdir="${classes.dir}" includeantruntime="false" classpath="project.classpath">
-            <classpath refid="project.classpath" />
+        <javac srcdir="${src.dir}" destdir="${classes.dir}" includeantruntime="false">
+            <classpath>
+                <fileset dir="${lib.dir}">
+                    <include name="*.jar" />
+                </fileset>
+            </classpath>
             <compilerarg line="-Xlint:unchecked" />
         </javac>
     </target>
@@ -47,47 +56,33 @@
             </fileset>
         </copy>
         <war destfile="${build.dir}/${war.name}" webxml="${webapp.dir}/WEB-INF/web.xml">
-            <manifest>
-                <attribute name="Manifest-Version" value="1.0"/>
-                <attribute name="Version" value="1.0-SNAPSHOT"/>
-            </manifest>
             <fileset dir="${build.dir}/webapp">
                 <include name="**/*" />
-                <exclude name="**/WEB-INF/web.xml" />
+                <exclude name="/WEB-INF/web.xml" />
             </fileset>
         </war>
     </target>
 
-    <!-- Validate XML files -->
-    <target name="xml">
-        <xmlvalidate lenient="true">
-            <fileset dir="${basedir}">
-                <include name="**/*.xml" />
-            </fileset>
-        </xmlvalidate>
-    </target>
-
-    <!-- Classpath for JUnit tests -->
-    <path id="test.classpath">
-        <path refid="project.classpath" />
-        <pathelement location="${build.dir}/webapp/WEB-INF/classes" />
-        <pathelement location="${build.dir}/test-classes" />
-        <fileset dir="${lib.dir}">
-            <include name="**/*.jar" />
-        </fileset>
-    </path>
-
     <!-- Test isInArea function using Junit -->
     <target name="test" depends="build">
         <mkdir dir="${build.dir}/test-classes"/>
-        <javac srcdir="${test.dir}" destdir="${build.dir}/test-classes" includeantruntime="false" classpathref="test.classpath">
+        <javac srcdir="${test.dir}" destdir="${build.dir}/test-classes" includeantruntime="false">
+            <classpath>
+                <fileset dir="${lib.dir}">
+                    <include name="*.jar" />
+                </fileset>
+                <pathelement location="${classes.dir}" />
+            </classpath>
             <compilerarg line="-Xlint:unchecked"/>
         </javac>
 
         <mkdir dir="${build.dir}/test-results"/>
         <junitlauncher haltonfailure="true" printsummary="true">
             <classpath>
-                <path refid="test.classpath"/>
+                <fileset dir="${lib.dir}">
+                    <include name="*.jar" />
+                </fileset>
+                <pathelement location="${classes.dir}" />
                 <pathelement location="${build.dir}/test-classes"/>
             </classpath>
             <testclasses outputdir="${build.dir}/test-results">
@@ -96,53 +91,29 @@
         </junitlauncher>
     </target>
 
-    <!-- Alteernative environment -->
-    <target name="env">
-        <fail unless="java.home" message="java.home is not set in env.properties" />
-        <fail unless="javac.args" message="javac.args is not set in env.properties" />
-        <fail unless="vm.args" message="vm.args is not set in env.properties" />
-
-        <javac srcdir="${src.dir}" destdir="${classes.dir}" includeantruntime="false" fork="true" executable="${java.home}/bin/javac">
-            <classpath refid="project.classpath" />
-            <compilerarg line="${javac.args}" />
-        </javac>
-
-        <java fork="true" classname="com.example.Main">
-            <jvmarg line="-Djava.home=${java.home} ${vm.args}" />
+    <!-- Generate docs and update MANIFEST.MF with checksums -->
+    <target name="doc" depends="build, generate-checksums">
+        <mkdir dir="${build.dir}/javadoc"/>
+        <javadoc sourcepath="${src.dir}" destdir="${build.dir}/javadoc" packagenames="*">
             <classpath>
-                <path refid="project.classpath" />
-                <pathelement location="${classes.dir}" />
+                <fileset dir="${lib.dir}">
+                    <include name="*.jar" />
+                </fileset>
             </classpath>
-        </java>
-    </target>
-    
-    <target name="find-working-revision">
-        <exec executable="git" failonerror="false">
-            <arg value="checkout"/>
-            <arg value="${revision}"/>
-        </exec>
+        </javadoc>
 
-        <trycatch>
-            <try>
-                <antcall target="compile"/>
-                <echo>Found working revision: ${revision}</echo>
-                <exec executable="git" output="${build.dir}/diff.txt" failonerror="false">
-                    <arg value="diff"/>
-                    <arg value="${revision}~1"/>
-                    <arg value="${current.revision}"/>
-                </exec>
-                <exec executable="git" failonerror="false">
-                    <arg value="checkout"/>
-                    <arg value="${current.revision}"/>
-                </exec>
-                <fail message="Compilation fixed. Please check diff.txt for changes."/>
-            </try>
-            <catch>
-                <echo>Compilation failed on revision: ${revision}. Checking previous revision...</echo>
-            </catch>
-        </trycatch>
-    </target>
+        <loadfile property="md5" srcFile="${checksums.md5.file}"/>
+        <loadfile property="sha1" srcFile="${checksums.sha1.file}"/>
 
+        <manifest file="${build.dir}/webapp/META-INF/MANIFEST.MF" mode="update">
+            <attribute name="MD5-Digest" value="${md5}"/>
+            <attribute name="SHA1-Digest" value="${sha1}"/>
+        </manifest>
+
+        <war destfile="${build.dir}/${war.name}" update="true">
+            <fileset dir="${build.dir}/javadoc"/>
+        </war>
+    </target>
 
     <!-- Generate MD5 & SHA-1 hash -->
     <target name="generate-checksums">
@@ -169,60 +140,15 @@
         </delete>
     </target>
 
-    <!-- Generate docs -->
-    <target name="doc" depends="build, generate-checksums">
-        <mkdir dir="${build.dir}/javadoc"/>
-        <javadoc sourcepath="${src.dir}" destdir="${build.dir}/javadoc" packagenames="*">
-            <classpath refid="project.classpath" />
-        </javadoc>
-
-        <loadfile property="md5" srcFile="${checksums.md5.file}"/>
-        <loadfile property="sha1" srcFile="${checksums.sha1.file}"/>
-
-        <manifest file="${build.dir}/webapp/META-INF/MANIFEST.MF" mode="update">
-            <attribute name="MD5-Digest" value="${md5}"/>
-            <attribute name="SHA1-Digest" value="${sha1}"/>
-        </manifest>
-
-        <war destfile="${build.dir}/${war.name}" update="true">
-            <fileset dir="${build.dir}/javadoc"/>
-        </war>
-    </target>
-
-    <!-- Junit reports -->
-    <target name="report" depends="test">
-        <mkdir dir="${build.dir}/test-reports"/>
-
-        <junitreport todir="${build.dir}/test-reports">
-            <fileset dir="${build.dir}/test-results">
-                <include name="TEST-*.xml"/>
-            </fileset>
-            <report format="frames" todir="${build.dir}/test-reports/html"/>
-        </junitreport>
-
-        <exec executable="svn" failonerror="false">
-            <arg value="add"/>
-            <arg value="${build.dir}/test-reports"/>
-        </exec>
-
-        <exec executable="svn" failonerror="false">
-            <arg value="commit"/>
-            <arg value="-m"/>
-            <arg value="Automated commit of JUnit test report"/>
-        </exec>
-    </target>
-
-    <target name="commit" if="changes.detected">
-        <exec executable="git" failonerror="true">
-            <arg value="add"/>
-            <arg value="."/>
-        </exec>
-
-        <exec executable="git" failonerror="true">
-            <arg value="commit"/>
-            <arg value="-m"/>
-            <arg value="${message}"/>
-        </exec>
-    </target>
-
+    <target name="env" depends="clean">
+        <mkdir dir="${classes.dir}"/>
+        <javac srcdir="${src.dir}" destdir="${classes.dir}" classpathref="project.classpath" includeantruntime="false">
+        </javac>
+        <copy todir="${classes.dir}">
+            <fileset dir="src/main/resources"/>
+        </copy>
+        <antcall target="build"/>
+        <copy file="build/opi_lab_3.war" todir="."/>
+        <exec executable="${env.script}"/>
+          </target>
 </project>
