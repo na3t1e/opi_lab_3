@@ -6,8 +6,8 @@
     <property name="test.dir" value="src/test/java"/>
     <property name="webapp.dir" value="src/main/webapp"/>
     <property name="war.name" value="opi_lab_3.war"/>
-    <property name="checksums.md5.file" value="build/checksums.md5"/>
-    <property name="checksums.sha1.file" value="build/checksums.sha1"/>
+    <property name="checksums.md5.file" value="${build.dir}/checksums.md5"/>
+    <property name="checksums.sha1.file" value="${build.dir}/checksums.sha1"/>
     <property name="env.script" value="script.bat"/>
 
     <path id="project.classpath">
