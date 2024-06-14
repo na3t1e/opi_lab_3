@@ -1,14 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project name="opi_lab_3" default="compile" basedir=".">
-    <property name="src.dir" value="src/main/java"/>
-    <property name="build.dir" value="build"/>
-    <property name="classes.dir" value="build/classes"/>
-    <property name="lib.dir" value="lib"/>
-    <property name="test.dir" value="src/test/java"/>
-    <property name="webapp.dir" value="src/main/webapp"/>
-    <property name="war.name" value="opi_lab_3.war"/>
-    <property name="checksums.md5.file" value="${build.dir}/checksums.md5"/>
-    <property name="checksums.sha1.file" value="${build.dir}/checksums.sha1"/>
-    <property name="env.script" value="script.bat"/>
+    <property file="build.properties"/>
 
     <path id="project.classpath">
         <fileset dir="${lib.dir}" includes="*.jar"/>
@@ -140,15 +132,18 @@
         </delete>
     </target>
 
-    <target name="env" depends="clean">
-        <mkdir dir="${classes.dir}"/>
-        <javac srcdir="${src.dir}" destdir="${classes.dir}" classpathref="project.classpath" includeantruntime="false">
+    <!-- Alteernative environment -->
+    <target name="env">
+    <javac srcdir="${src.dir}" destdir="${classes.dir}"  classpathref="project.classpath" source="${compile.version}"
+               includeantruntime="false">
+            <compilerarg line="${vm.args}"/>
         </javac>
         <copy todir="${classes.dir}">
             <fileset dir="src/main/resources"/>
         </copy>
-        <antcall target="build"/>
-        <copy file="build/opi_lab_3.war" todir="."/>
-        <exec executable="${env.script}"/>
-          </target>
+        <copy file="build/opi_lab_3.war" todir="${copy.dir}"/>
+        <exec executable="cmd">
+            <arg line="/c start ${env.script}"/>
+        </exec>
+    </target>
 </project>
